@@ -1,0 +1,59 @@
+cake:
+  authorization-token-prefix: 'Bearer '
+  jwt-hs512-secret: 'Mississippi'
+  db:
+    host: ${CAKE_DB_HOST:localhost}
+    port: ${CAKE_DB_PORT:3306}
+    database: ${CAKE_DB_DATABASE:cake_db_sample_database}
+    username: ${CAKE_DB_USERNAME:cake_db_sample_username}
+    password: ${CAKE_DB_PASSWORD:cake_db_sample_password}
+
+spring:
+  application:
+    name: cake-cloud-gateway
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      discovery:
+        health-check-path: /actuator/health
+        health-check-interval: 15s
+        instance-id: cake-cloud-gateway
+  datasource:
+    username: ${cake.db.username}
+    password: ${cake.db.password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${cake.db.host}:${cake.db.port}/${cake.db.database}?charset=utf8mb4&useSSL=false
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: net.cakecdn.cloud.gateway.all.config.MySQLDialect
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"  # 显示端点内所有的状态信息
+  endpoint:
+    health:
+      show-details: ALWAYS # 显示详细的健康状况
+
+server:
+  port: 7000
+
+zuul:
+  routes:
+    filer:
+      path: /admin-endpoint/**
+      serviceId: cake-endpoint-admin
+    guest:
+      path: /user-endpoint/**
+      serviceId: service-account
+  sensitive-headers: Access-Control-Allow-Origin
+  ignored-headers: Access-Control-Allow-Origin,H-APP-Id,Token,APPToken
+  host: # url路由超时
+    connect-timeout-millis: 60000
+    socket-timeout-millis: 60000
