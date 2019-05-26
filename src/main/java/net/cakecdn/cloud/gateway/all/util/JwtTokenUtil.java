@@ -74,6 +74,7 @@ public class JwtTokenUtil implements Serializable {
 
         userDetails.getAuthorities().forEach(a -> authList.add(a.getAuthority()));
 
+        claims.put("uid", user.getId());
         claims.put("sub", userDetails.getUsername());
         claims.put("created", new Date());
         claims.put("auth", authList);
