@@ -48,10 +48,10 @@ zuul:
   routes:
     filer:
       path: /admin-endpoint/**
-      serviceId: cake-endpoint-admin
+      serviceId: cake-api-admin
     guest:
       path: /user-endpoint/**
-      serviceId: service-account
+      serviceId: cake-api-user
   sensitive-headers: Access-Control-Allow-Origin
   ignored-headers: Access-Control-Allow-Origin,H-APP-Id,Token,APPToken
   host: # url路由超时
