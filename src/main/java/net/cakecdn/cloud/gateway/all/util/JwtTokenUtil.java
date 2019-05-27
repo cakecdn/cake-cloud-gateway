@@ -1,10 +1,10 @@
 package net.cakecdn.cloud.gateway.all.util;
 
-import net.cakecdn.cloud.gateway.all.domain.User;
-import net.cakecdn.cloud.gateway.all.domain.dto.JwtUser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import net.cakecdn.cloud.gateway.all.domain.User;
+import net.cakecdn.cloud.gateway.all.domain.dto.JwtUser;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -54,12 +54,30 @@ public class JwtTokenUtil implements Serializable {
                     .parseClaimsJws(token)
                     .getBody();
         } catch (Exception e) {
+            e.printStackTrace();
             claims = null;
         }
 
         return claims;
     }
 
+    /**
+     * 从令牌中获取sub字段
+     *
+     * @param token 令牌
+     * @return 用户名
+     */
+    public Map<String, Object> getSubFromToken(String token) {
+        Map<String, Object> subject = null;
+
+        try {
+            Claims claims = getClaimsFromToken(token);
+            subject = (Map<String, Object>) claims.get("sub");
+        } catch (Exception ignored) {
+        }
+
+        return subject;
+    }
 
     /**
      * 生成令牌
@@ -69,41 +87,23 @@ public class JwtTokenUtil implements Serializable {
      * @return JWT令牌
      */
     public String generateToken(User user, UserDetails userDetails) {
-        Map<String, Object> claims = new HashMap<>(2);
+        Map<String, Object> claimsMap = new HashMap<>(2);
+        Map<String, Object> subjectMap = new HashMap<>();
         List<String> authList = new LinkedList<>();
 
         userDetails.getAuthorities().forEach(a -> authList.add(a.getAuthority()));
 
-        claims.put("uid", user.getId());
-        claims.put("sub", userDetails.getUsername());
-        claims.put("created", new Date());
-        claims.put("auth", authList);
-        claims.put("disabled", user.isDisabled());
-        claims.put("avatar", user.getAvatar());
+        subjectMap.put("uid", user.getId());
+        subjectMap.put("username", user.getUsername());
+        subjectMap.put("created", new Date());
+        subjectMap.put("auth", authList);
+        subjectMap.put("disabled", user.isDisabled());
+        subjectMap.put("avatar", user.getAvatar());
 
-        return generateToken(claims);
+        claimsMap.put("sub", subjectMap);
+
+        return generateToken(claimsMap);
     }
-
-
-    /**
-     * 从令牌中获取用户名
-     *
-     * @param token 令牌
-     * @return 用户名
-     */
-    public String getUsernameFromToken(String token) {
-        String username;
-
-        try {
-            Claims claims = getClaimsFromToken(token);
-            username = claims.getSubject();
-        } catch (Exception e) {
-            username = null;
-        }
-
-        return username;
-    }
-
 
     /**
      * 判断令牌是否过期
@@ -120,7 +120,6 @@ public class JwtTokenUtil implements Serializable {
             return false;
         }
     }
-
 
     /**
      * 刷新令牌
@@ -140,7 +139,6 @@ public class JwtTokenUtil implements Serializable {
         return refreshedToken;
     }
 
-
     /**
      * 验证令牌
      * 1、是否被篡改
@@ -153,7 +151,8 @@ public class JwtTokenUtil implements Serializable {
      */
     public Boolean validateToken(String token, UserDetails userDetails) {
         JwtUser user = (JwtUser) userDetails;
-        String username = getUsernameFromToken(token);
+        Map<String, Object> sub = getSubFromToken(token);
+        String username = (String) sub.get("username");
         return (username.equals(user.getUsername()) && !isTokenExpired(token));
     }
 
@@ -162,7 +161,7 @@ public class JwtTokenUtil implements Serializable {
 
         try {
             Claims claims = getClaimsFromToken(token);
-            authorities = (List<String>) claims.get("auth");
+            authorities = ((Map<String, List<String>>) claims.get("sub")).get("auth");
         } catch (Exception e) {
             authorities = null;
         }
